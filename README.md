@@ -76,8 +76,8 @@ Search     (all-MiniLM-L6-v2)
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/airbnb-ranking-engine.git
-cd airbnb-ranking-engine
+git clone https://github.com/tayade-aniket/airbnb_search_ranking_system
+cd airbnb_search_ranking_system
 
 # 2. Create a virtual environment
 python -m venv .venv
