@@ -130,12 +130,14 @@ def generate_queries(n: int = config.NUM_QUERIES, seed: int = config.RANDOM_SEED
     queries = []
     categories = list(_QUERY_TEMPLATES.keys())
     per_category = n // len(categories)
+    available_cities = config.discover_cities() or config.CITIES or ["Amsterdam"]
 
     for cat in categories:
         templates = _QUERY_TEMPLATES[cat]
         for i in range(per_category):
-            city = rng.choice(config.CITIES)
-            landmark = rng.choice(_CITY_LANDMARKS.get(city, ["the city centre"]))
+            city = rng.choice(available_cities)
+            default_landmarks = ["the city centre", "the central station", "downtown", "the old town"]
+            landmark = rng.choice(_CITY_LANDMARKS.get(city, default_landmarks))
             price = rng.choice(_PRICE_OPTIONS)
             template = rng.choice(templates)
 
@@ -155,7 +157,7 @@ def generate_queries(n: int = config.NUM_QUERIES, seed: int = config.RANDOM_SEED
             })
 
     rng.shuffle(queries)
-    log.info("Generated %d synthetic queries across %d categories.", len(queries), len(categories))
+    log.info("Generated %d synthetic queries across %d categories for %d cities.", len(queries), len(categories), len(available_cities))
     return queries
 
 

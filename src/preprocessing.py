@@ -49,17 +49,29 @@ log = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def load_all_listings() -> pd.DataFrame:
-    """Load listings.csv from each city folder and concatenate."""
+    """Load listings.csv from each city folder and concatenate.
+
+    Cities are AUTO-DISCOVERED by scanning data/raw/ — any folder containing
+    a listings.csv is automatically included.  No code changes needed when
+    new datasets are added.
+    """
     frames = []
-    for city in config.CITIES:
+    cities = config.discover_cities()
+    log.info("Auto-discovered %d cities: %s", len(cities), cities)
+
+    for city in cities:
         path = config.RAW_DIR / city / "listings.csv"
         if not path.exists():
             log.warning("listings.csv not found for %s — skipping.", city)
             continue
         df = pd.read_csv(path, low_memory=False)
         df["city"] = city
-        log.info("Loaded %s: %d listings, %d columns", city, len(df), len(df.columns))
+        log.info("  Loaded %-14s : %d listings, %d columns", city, len(df), len(df.columns))
         frames.append(df)
+
+    if not frames:
+        raise RuntimeError(f"No listings found in {config.RAW_DIR}. "
+                           "Make sure each city folder contains listings.csv")
 
     combined = pd.concat(frames, ignore_index=True, sort=False)
     log.info("Combined dataset: %d listings, %d columns", len(combined), len(combined.columns))
@@ -346,7 +358,7 @@ def process_reviews() -> pd.DataFrame:
     log.info("Processing reviews…")
     agg_frames = []
 
-    for city in config.CITIES:
+    for city in config.discover_cities():
         path = config.RAW_DIR / city / "reviews.csv"
         if not path.exists():
             log.warning("reviews.csv not found for %s — skipping.", city)
@@ -404,7 +416,7 @@ def process_calendar() -> pd.DataFrame:
     log.info("Processing calendar files (this may take a few minutes)…")
     agg_frames = []
 
-    for city in config.CITIES:
+    for city in config.discover_cities():
         path = config.RAW_DIR / city / "calendar.csv"
         if not path.exists():
             log.warning("calendar.csv not found for %s — skipping.", city)
@@ -478,9 +490,9 @@ def _aggregate_calendar_chunked(path: Path, city: str) -> pd.DataFrame | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def load_neighbourhoods() -> pd.DataFrame:
-    """Merge neighbourhoods.csv from all cities."""
+    """Merge neighbourhoods.csv from all auto-discovered cities."""
     frames = []
-    for city in config.CITIES:
+    for city in config.discover_cities():
         path = config.RAW_DIR / city / "neighbourhoods.csv"
         if not path.exists():
             continue
@@ -490,6 +502,36 @@ def load_neighbourhoods() -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
+
+
+def compute_and_save_centroids(df: pd.DataFrame) -> None:
+    """
+    For any city not in the known-coordinates lookup, compute its centroid
+    from listing lat/lon and save to data/processed/city_centres.json.
+    This ensures geographic features work for newly added cities.
+    """
+    import json
+    cities = df["city"].unique()
+    centroids = {}
+    for city in cities:
+        if config.get_city_centre(city) is None:
+            city_df = df[df["city"] == city]
+            lat = city_df["latitude"].median()
+            lon = city_df["longitude"].median()
+            if pd.notna(lat) and pd.notna(lon):
+                centroids[city] = [float(lat), float(lon)]
+                log.info("Computed centroid for new city '%s': (%.4f, %.4f)", city, lat, lon)
+    if centroids:
+        out_path = config.PROCESSED_DIR / "city_centres.json"
+        # Merge with existing if present
+        existing = {}
+        if out_path.exists():
+            with open(out_path) as f:
+                existing = json.load(f)
+        existing.update(centroids)
+        with open(out_path, "w") as f:
+            json.dump(existing, f, indent=2)
+        log.info("Saved computed centroids for %d new cities → %s", len(centroids), out_path)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -622,6 +664,7 @@ def run_preprocessing() -> pd.DataFrame:
         log.info("Saved neighbourhoods_combined.csv")
 
     # Step 5 — Merge & save
+    compute_and_save_centroids(clean)
     final = merge_and_save(clean, reviews_agg, calendar_agg)
     print_summary(final)
 

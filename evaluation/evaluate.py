@@ -291,11 +291,46 @@ def print_results_table(results: list[dict]) -> None:
     print("These metrics measure improvement relative to baselines, not absolute quality.")
 
 
+def update_readme_with_metrics(results: list[dict]) -> None:
+    """Auto-update the Evaluation benchmark table in README.md with real measured metrics."""
+    readme_path = config.ROOT_DIR / "README.md"
+    if not readme_path.exists():
+        return
+
+    table_lines = [
+        "| Approach | Recall@100 | MRR@10 | NDCG@10 | Avg Latency | P95 Latency |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in results:
+        model = r.get("model", "")
+        rec100 = f"{r.get('Recall@100', 0):.3f}"
+        mrr10 = f"{r.get('MRR@10', 0):.3f}"
+        ndcg10 = f"{r.get('NDCG@10', 0):.3f}"
+        avg_lat = f"{r.get('Avg_Latency_ms', 0):.1f} ms" if r.get('Avg_Latency_ms') is not None else "—"
+        p95_lat = f"{r.get('P95_Latency_ms', 0):.1f} ms" if r.get('P95_Latency_ms') is not None else "—"
+        table_lines.append(f"| {model} | {rec100} | {mrr10} | {ndcg10} | {avg_lat} | {p95_lat} |")
+
+    new_table_str = "\n".join(table_lines)
+
+    content = readme_path.read_text(encoding="utf-8")
+    import re
+    pattern = r"(## Evaluation\s*\n\n)(?:>.*?\n\n)?\| Approach \|[\s\S]*?(?=\n\n---|\Z)"
+    replacement = r"\1" + new_table_str
+
+    if re.search(pattern, content):
+        updated_content = re.sub(pattern, replacement, content)
+        readme_path.write_text(updated_content, encoding="utf-8")
+        log.info("Auto-updated README.md evaluation table with real metrics.")
+    else:
+        log.warning("Could not find evaluation table pattern in README.md to replace.")
+
+
 def save_results(results: list[dict]) -> None:
     config.ensure_dirs()
     with open(config.EVAL_RESULTS_PATH, "w") as f:
         json.dump(results, f, indent=2)
     log.info("Evaluation results saved to %s", config.EVAL_RESULTS_PATH)
+    update_readme_with_metrics(results)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -317,3 +352,4 @@ def run_evaluation() -> None:
 
 if __name__ == "__main__":
     run_evaluation()
+

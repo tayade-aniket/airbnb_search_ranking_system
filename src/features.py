@@ -306,7 +306,7 @@ class FeatureEngineer:
             # ── Geographic features ───────────────────────────────────────
             lat = _safe_float(row.get("latitude"), 0.0)
             lon = _safe_float(row.get("longitude"), 0.0)
-            city_centre = config.CITY_CENTRES.get(city, (lat, lon))
+            city_centre = config.get_city_centre(city) or (lat, lon)
             try:
                 dist_km = _haversine_km(lat, lon, city_centre[0], city_centre[1])
             except Exception:

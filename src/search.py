@@ -87,39 +87,81 @@ def build_index(listings: Optional[pd.DataFrame] = None) -> None:
     log.info("Building index for %d listings…", len(listings))
 
     # ── TF-IDF ──────────────────────────────────────────────────────────────
-    log.info("Fitting TF-IDF vectorizer (max_features=%d)…", config.TFIDF_MAX_FEATURES)
-    TfidfVectorizer, _ = _import_sklearn_tfidf()
-    tfidf = TfidfVectorizer(
-        max_features=config.TFIDF_MAX_FEATURES,
-        ngram_range=config.TFIDF_NGRAM_RANGE,
-        strip_accents="unicode",
-        analyzer="word",
-        sublinear_tf=True,
-    )
-    tfidf_matrix = tfidf.fit_transform(texts)
+    if config.TFIDF_VECTORIZER_PATH.exists() and config.TFIDF_MATRIX_PATH.exists():
+        log.info("Found existing TF-IDF artifacts at %s — skipping re-fit.", config.TFIDF_VECTORIZER_PATH)
+    else:
+        log.info("Fitting TF-IDF vectorizer (max_features=%d)…", config.TFIDF_MAX_FEATURES)
+        TfidfVectorizer, _ = _import_sklearn_tfidf()
+        tfidf = TfidfVectorizer(
+            max_features=config.TFIDF_MAX_FEATURES,
+            ngram_range=config.TFIDF_NGRAM_RANGE,
+            strip_accents="unicode",
+            analyzer="word",
+            sublinear_tf=True,
+        )
+        tfidf_matrix = tfidf.fit_transform(texts)
 
-    with open(config.TFIDF_VECTORIZER_PATH, "wb") as f:
-        pickle.dump(tfidf, f)
-    sparse.save_npz(str(config.TFIDF_MATRIX_PATH), tfidf_matrix)
-    log.info("TF-IDF: saved vectorizer and matrix (%s terms)", len(tfidf.vocabulary_))
+        with open(config.TFIDF_VECTORIZER_PATH, "wb") as f:
+            pickle.dump(tfidf, f)
+        sparse.save_npz(str(config.TFIDF_MATRIX_PATH), tfidf_matrix)
+        log.info("TF-IDF: saved vectorizer and matrix (%s terms)", len(tfidf.vocabulary_))
 
     # ── Sentence Transformer embeddings ─────────────────────────────────────
+    if config.EMBEDDINGS_MATRIX_PATH.exists() and config.FAISS_INDEX_PATH.exists() and config.LISTING_IDS_PATH.exists():
+        log.info("Found existing FAISS index and embeddings at %s — skipping re-encode.", config.FAISS_INDEX_PATH)
+        return
+
     log.info("Loading embedding model: %s…", config.EMBEDDING_MODEL_NAME)
     SentenceTransformer = _import_sentence_transformers()
     model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
 
-    log.info("Encoding %d listing texts (this may take 3–10 min on CPU)…", len(texts))
-    embeddings = model.encode(
-        texts,
-        batch_size=64,
-        show_progress_bar=True,
-        normalize_embeddings=True,   # L2-normalise so inner product = cosine
-        convert_to_numpy=True,
-    )
-    embeddings = embeddings.astype(np.float32)
+    import os
+    import torch
+    n_threads = max(1, os.cpu_count() or 4)
+    torch.set_num_threads(n_threads)
+    log.info("Configured PyTorch CPU threads: %d", n_threads)
 
+    chk_path = config.EMBEDDINGS_DIR / "embeddings_checkpoint.npy"
+    chunk_size = 2500
+    all_embeddings = []
+
+    start_idx = 0
+    if chk_path.exists():
+        try:
+            cached = np.load(str(chk_path))
+            if len(cached) > 0 and len(cached) < len(texts):
+                start_idx = len(cached)
+                all_embeddings.append(cached)
+                log.info("Resuming embedding generation from checkpoint: %d/%d listings", start_idx, len(texts))
+        except Exception as e:
+            log.warning("Could not load checkpoint: %s. Starting fresh.", e)
+            start_idx = 0
+
+    log.info("Encoding %d listing texts (chunks of %d, batch_size=256)…", len(texts) - start_idx, chunk_size)
+    for i in range(start_idx, len(texts), chunk_size):
+        chunk_texts = texts[i : i + chunk_size]
+        chunk_emb = model.encode(
+            chunk_texts,
+            batch_size=256,
+            show_progress_bar=True,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+        ).astype(np.float32)
+        all_embeddings.append(chunk_emb)
+
+        # Save checkpoint
+        curr_stacked = np.vstack(all_embeddings)
+        np.save(str(chk_path), curr_stacked)
+        log.info("  Encoded %d / %d listings (%.1f%%)", min(i + chunk_size, len(texts)), len(texts), 100.0 * min(i + chunk_size, len(texts)) / len(texts))
+
+    embeddings = np.vstack(all_embeddings)
     np.save(str(config.EMBEDDINGS_MATRIX_PATH), embeddings)
     np.save(str(config.LISTING_IDS_PATH), listing_ids)
+    if chk_path.exists():
+        try:
+            chk_path.unlink()
+        except Exception:
+            pass
     log.info("Embeddings saved: shape %s", embeddings.shape)
 
     # ── FAISS index ──────────────────────────────────────────────────────────
