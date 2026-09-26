@@ -1,7 +1,7 @@
 # ── Core data processing ──────────────────────────────────────────────────────
 pandas>=2.0.0
 numpy>=1.24.0
-pyarrow>=12.0.0          # parquet read/write
+pyarrow>=12.0.0,<25.0.0 # parquet read/write
 
 # ── ML / Ranking ──────────────────────────────────────────────────────────────
 scikit-learn>=1.3.0
@@ -12,6 +12,7 @@ shap>=0.43.0              # feature-importance explanations
 sentence-transformers>=2.2.0
 transformers>=4.30.0
 torch>=2.0.0              # CPU build is fine; sentence-transformers dependency
+torchvision>=0.15.0
 
 # ── Keyword search ────────────────────────────────────────────────────────────
 rank-bm25>=0.2.2          # BM25 (optional upgrade from TF-IDF)
