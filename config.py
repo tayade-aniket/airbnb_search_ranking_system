@@ -29,13 +29,28 @@ RESULTS_DIR = ROOT_DIR / "results"
 # into data/raw/ and re-running preprocessing — no code changes needed.
 
 def discover_cities() -> list[str]:
-    """Return sorted list of city names found in data/raw/ at call time."""
-    if not RAW_DIR.exists():
-        return []
-    return sorted(
-        d.name for d in RAW_DIR.iterdir()
-        if d.is_dir() and (d / "listings.csv").exists()
-    )
+    """Return sorted list of city names found in data/raw/ or fallback to processed data."""
+    if RAW_DIR.exists():
+        raw_cities = sorted(
+            d.name for d in RAW_DIR.iterdir()
+            if d.is_dir() and (d / "listings.csv").exists()
+        )
+        if raw_cities:
+            return raw_cities
+
+    # Fallback to processed listings if raw data is not present (e.g. in cloud deployment)
+    clean_path = PROCESSED_DIR / "listings_clean.parquet"
+    if clean_path.exists():
+        try:
+            import pandas as pd
+            df = pd.read_parquet(clean_path, columns=["city"])
+            cities = sorted(df["city"].dropna().unique().tolist())
+            if cities:
+                return cities
+        except Exception:
+            pass
+
+    return ["Albany", "Amsterdam", "Antwerp", "Asheville", "Athens"]
 
 
 # Evaluated lazily so imports work before data/raw/ exists

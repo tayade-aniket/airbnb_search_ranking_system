@@ -33,8 +33,7 @@ venv.bak/
 
 # ── Data — raw CSVs are large; do NOT commit them ────────────────────────────
 data/raw/
-# Processed parquet files are also large — regenerate from preprocessing.py
-data/processed/
+
 
 # ── Secrets ───────────────────────────────────────────────────────────────────
 .env
