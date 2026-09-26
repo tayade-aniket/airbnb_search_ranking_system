@@ -46,10 +46,10 @@ def load_engine():
 
 
 @st.cache_resource(show_spinner="Loading ranking model…")
-def load_ranker(engine):
+def load_ranker(_engine):
     from src.features import FeatureEngineer
     from src.ranking import XGBRankingModel
-    fe = FeatureEngineer(engine.listings)
+    fe = FeatureEngineer(_engine.listings)
     model = XGBRankingModel()
     try:
         model.load(fe)
