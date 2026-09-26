@@ -246,3 +246,36 @@ uvicorn api:app --reload --host 0.0.0.0 --port 8000
 - **Dataset**: Publicly provided by [Inside Airbnb](https://insideairbnb.com/) under [Creative Commons CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
 - **Code License**: [MIT License](LICENSE).
 - *Disclaimer: This project is an independent educational/portfolio system and is not affiliated with or endorsed by Airbnb Inc.*
+
+---
+
+## 👨‍💻 Author & Maintainer
+
+<table align="center">
+  <tr>
+    <td align="center" width="160">
+      <img src="https://github.com/tayade-aniket.png" width="120" style="border-radius: 50%;" alt="Aniket Tayade" /><br />
+      <b>Aniket Tayade</b>
+    </td>
+    <td>
+      <p><b>Machine Learning & Search Ranking Enthusiast</b></p>
+      <p>
+        Focused on building production-grade <b>Information Retrieval (IR)</b>, <b>Semantic Vector Search</b>, and <b>Learning-to-Rank (LTR)</b> systems. Passionate about solving complex marketplace discovery problems with clean architectures and low-latency inference.
+      </p>
+      <p>
+        <a href="https://github.com/tayade-aniket"><img src="https://img.shields.io/badge/GitHub-tayade--aniket-181717?style=flat-square&logo=github" alt="GitHub" /></a>
+        <a href="https://airbnb-search-ranking-system.streamlit.app/"><img src="https://img.shields.io/badge/Streamlit_App-Live_Demo-FF4B4B?style=flat-square&logo=streamlit" alt="Streamlit App" /></a>
+        <a href="https://github.com/tayade-aniket/airbnb_search_ranking_system"><img src="https://img.shields.io/badge/Repo-Star_Project-yellow?style=flat-square&logo=githubsponsors" alt="Star" /></a>
+      </p>
+    </td>
+  </tr>
+</table>
+
+<div align="center">
+
+*Feel free to reach out for collaborations, discussions on recommendation systems, or opportunities!*
+
+⭐ **If you find this project helpful or inspiring, please consider starring the repository!** ⭐
+
+</div>
+
