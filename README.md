@@ -249,7 +249,8 @@ uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-## 👨‍💻 Author & Maintainer
+## 👨‍💻 Author
+
 
 <table align="center">
   <tr>
@@ -258,9 +259,9 @@ uvicorn api:app --reload --host 0.0.0.0 --port 8000
       <b>Aniket Tayade</b>
     </td>
     <td>
-      <p><b>Machine Learning & Search Ranking Enthusiast</b></p>
+      <p><b>Machine Learning Engineer</b></p>
       <p>
-        Focused on building production-grade <b>Information Retrieval (IR)</b>, <b>Semantic Vector Search</b>, and <b>Learning-to-Rank (LTR)</b> systems. Passionate about solving complex marketplace discovery problems with clean architectures and low-latency inference.
+        I build search and ranking systems that actually hold up in production — think semantic vector search, learning-to-rank, and information retrieval pipelines tuned for real marketplace traffic. I care a lot about keeping the architecture clean and the inference fast, because a great ranking model means nothing if it's too slow to serve.
       </p>
       <p>
         <a href="https://github.com/tayade-aniket"><img src="https://img.shields.io/badge/GitHub-tayade--aniket-181717?style=flat-square&logo=github" alt="GitHub" /></a>
